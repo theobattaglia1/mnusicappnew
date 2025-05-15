@@ -60,8 +60,12 @@ public final class FileSystemManager: ObservableObject {
         let src = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd,
                                                             eventMask: [.write, .rename, .delete],
                                                             queue: .main)
-        src.setEventHandler { [weak self] in self?.refreshAllFiles() }
-        src.setCancelHandler { close(fd) }
+        src.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.refreshAllFiles()
+            }
+        };        src.setCancelHandler { close(fd) }
         src.resume()
         watchers[folder] = src
     }

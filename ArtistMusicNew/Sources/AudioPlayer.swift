@@ -65,16 +65,21 @@ final class AudioPlayer: ObservableObject {
     }
 
     func playSong(_ song: Song) {
-
         // ── unwrap URL ────────────────────────────────────────────────
         guard let url = song.fileURL else {
-            print("‼️ fileURL == nil for", song.title)
+            print("‼️ fileURL is nil for song: \(song.title), fileName: \(song.fileName)")
+            return
+        }
+
+        // Verify file exists
+        if !FileManager.default.fileExists(atPath: url.path) {
+            print("‼️ File does not exist at path: \(url.path)")
             return
         }
 
         // optional diagnostic: show size
         if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize {
-            print("   file size:", size, "bytes")
+            print("   Audio file size: \(size) bytes")
         }
 
         // ── prepare AVPlayerItem ──────────────────────────────────────
@@ -89,13 +94,15 @@ final class AudioPlayer: ObservableObject {
                 case .readyToPlay:
                     print("▶️ ready, starting", url.lastPathComponent)
                     self?.player.play()
-                default: break
+                default:
+                    print("⏳ AVPlayerItem status:", status.rawValue)
+                    break
                 }
             }
 
         player.replaceCurrentItem(with: item)
-        current    = song
-        isPlaying  = true
+        current = song
+        isPlaying = true
         startRotation()
     }
     

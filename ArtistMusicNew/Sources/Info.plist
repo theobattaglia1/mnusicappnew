@@ -2,6 +2,27 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.item</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Finder Item</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.apple.finder.node</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/x-finder-node</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>ArtistMusic</string>
 	<key>CFBundleExecutable</key>
@@ -20,5 +41,107 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<!-- File sharing and document support keys -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+	<!-- Declare UTImportedTypeDeclarations for audio formats -->
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.audio</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>M4A Audio</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.apple.m4a-audio</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>m4a</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>audio/m4a</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.audio</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>WAV Audio</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.microsoft.waveform-audio</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>wav</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>audio/wav</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.audio</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>MP3 Audio</string>
+			<key>UTTypeIdentifier</key>
+			<string>public.mp3</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>mp3</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>audio/mpeg</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<!-- Document types to support -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Audio Files</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.audio</string>
+				<string>com.apple.m4a-audio</string>
+				<string>com.microsoft.waveform-audio</string>
+				<string>public.mp3</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Additional permissions and capabilities -->
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Access to your music library is needed to import audio files.</string>
+	<key>NSFileProviderPresenceUsageDescription</key>
+	<string>Access to files is needed to import audio content.</string>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<true/>
+<key>com.apple.security.files.all.read-write</key>
+<true/>
 </dict>
 </plist>

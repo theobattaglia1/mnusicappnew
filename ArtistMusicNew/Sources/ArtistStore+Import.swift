@@ -18,28 +18,40 @@ extension ArtistStore {
             withIntermediateDirectories: true
         )
 
-        let dest = audioDir.appendingPathComponent(url.lastPathComponent)
-        try? FileManager.default.removeItem(at: dest)
+        // Extract original filename for display
+        let originalFilename = url.lastPathComponent
+        let nameWithoutExtension = url.deletingPathExtension().lastPathComponent
+        print("📄 Original filename: \(originalFilename)")
+        print("📝 Using title: \(nameWithoutExtension)")
+
+        // Create a unique storage filename with original extension
+        let ext = url.pathExtension
+        let uniqueFilename = "\(UUID().uuidString).\(ext)"
+        let dest = audioDir.appendingPathComponent(uniqueFilename)
+        
         do {
             try FileManager.default.copyItem(at: url, to: dest)
+            print("✅ Copied file to: \(dest.path)")
         } catch {
             print("❌ Copy error:", error)
+            return
         }
 
-        // 3) Build the Song—fileName must match the copied filename
+        // 3) Build the Song - use original name as title but unique filename for storage
         let song = Song(
             id: UUID(),
-            title: dest.deletingPathExtension().lastPathComponent,
+            title: nameWithoutExtension,    // Original name for display
             version: "",
             creators: [],
             date: Date(),
             notes: "",
             artworkData: nil,
-            fileName: dest.lastPathComponent
+            fileName: uniqueFilename        // Unique name for storage
         )
 
         // 4) Add to the specified artist
         add(song, to: artistID)
+        print("✅ Added song: \(song.title) with storage filename: \(song.fileName)")
     }
 
     /// Sync playlists from a folder→files map

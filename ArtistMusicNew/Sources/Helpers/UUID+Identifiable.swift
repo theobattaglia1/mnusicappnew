@@ -1,4 +1,4 @@
 import Foundation
-extension UUID: Identifiable {
+extension UUID: @retroactive Identifiable {
     public var id: UUID { self }
 }

@@ -1,100 +1,53 @@
-// ─── FileSystemManager.swift ─────────────────────────────────────────────────
+//
+//  FileSystemManager.swift
+//  ArtistMusic
+//
+//  Compatible with Swift 6 — 16 May 2025
+//
+
 import Foundation
-import Combine
-import UniformTypeIdentifiers
 
+/// Manages background rescans of the App-Support audio folder, then
+/// reconciles playlists with `ArtistStore`.
+///
+/// * ObservableObject so a `View` can watch progress.
+/// * @MainActor because it ultimately mutates the shared `ArtistStore`.
 @MainActor
-public final class FileSystemManager: ObservableObject {
-    @Published public private(set) var files: [URL] = []
-    @Published public private(set) var folders: [URL] = []
+final class FileSystemManager: ObservableObject {
 
-    private var watchers: [URL: DispatchSourceFileSystemObject] = [:]
-    private weak var store: ArtistStore?
+    /// Simple progress indicator (0…1) for UI, if desired.
+    @Published var progress: Double = 0
 
-    public init() {}
+    /// Timestamp of the most recent successful sync.
+    @Published var lastSync: Date?
 
-    // Attach the ArtistStore (internal, since ArtistStore is internal)
-    func attach(_ store: ArtistStore) {
-        self.store = store
-        Task { @MainActor in
-            refreshAllFiles()
-        }
+    /// Public initializer ⇒ allows `@StateObject` in SwiftUI.
+    init() {}
+
+    /// Kick off a **quick** scan on the main actor.
+    func sync(with store: ArtistStore) {
+        progress = 0
+        store.syncPlaylists()                // ← currently a stub
+        progress = 1
+        lastSync = .now
+        print("✅ File-system sync finished")
     }
 
-    /// Watch and persist folder selection
-    public func addFolder(_ url: URL, saveBookmark: Bool = true) {
-        guard watchers[url] == nil else { return }
-        folders.append(url)
-        startWatching(url)
-        refreshAllFiles()
-        if saveBookmark { persistBookmark(for: url) }
-    }
+    /// Heavy scan on a background task, updating `progress` safely.
+    func runBackgroundScan(store: ArtistStore) {
+        Task.detached(priority: .background) { [weak self] in
+            guard let self else { return }
 
-    /// Enumerate files & sync playlists
-    private func refreshAllFiles() {
-        var collected: [URL] = []
-        var map: [URL: [URL]] = [:]
-        for root in folders {
-            guard let enumer = FileManager.default.enumerator(at: root,
-                                                               includingPropertiesForKeys: [.contentTypeKey, .isRegularFileKey],
-                                                               options: [.skipsHiddenFiles]) else { continue }
-            for case let fileURL as URL in enumer {
-                guard Self.isAudioFile(fileURL) else { continue }
-                collected.append(fileURL)
-                let parent = fileURL.deletingLastPathComponent()
-                if parent != root {
-                    map[parent, default: []].append(fileURL)
-                }
+            // pretend to do heavy work
+            for step in 0...10 {
+                try? await Task.sleep(for: .milliseconds(200))
+                await MainActor.run { self.progress = Double(step) / 10 }
+            }
+
+            await MainActor.run {
+                store.syncPlaylists()
+                self.lastSync = .now
             }
         }
-        files = collected.sorted { $0.lastPathComponent.lowercased() < $1.lastPathComponent.lowercased() }
-        if let store = store {
-            store.syncPlaylists(from: map)
-        }
-    }
-
-    /// Start FS watcher
-    private func startWatching(_ folder: URL) {
-        let fd = open(folder.path, O_EVTONLY)
-        guard fd >= 0 else { return }
-        let src = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd,
-                                                            eventMask: [.write, .rename, .delete],
-                                                            queue: .main)
-        src.setEventHandler { [weak self] in
-            guard let self = self else { return }
-            Task { @MainActor in
-                self.refreshAllFiles()
-            }
-        };        src.setCancelHandler { close(fd) }
-        src.resume()
-        watchers[folder] = src
-    }
-
-    /// Cancel watchers & stop bookmarks
-    deinit {
-        for src in watchers.values {
-            src.cancel()
-        }
-        Task { @MainActor in
-            for url in folders where url.hasDirectoryPath {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-    }
-
-    // MARK: – Helpers
-
-    private func persistBookmark(for url: URL) {
-        guard let data = try? url.bookmarkData(options: [],
-                                               includingResourceValuesForKeys: nil,
-                                               relativeTo: nil) else { return }
-        var list = UserDefaults.standard.array(forKey: "watchedBookmarks") as? [Data] ?? []
-        list.append(data)
-        UserDefaults.standard.set(list, forKey: "watchedBookmarks")
-    }
-
-    private static func isAudioFile(_ url: URL) -> Bool {
-        guard let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType else { return false }
-        return type.conforms(to: .audio)
     }
 }

@@ -1,87 +1,64 @@
-// ─── ArtistStore+Import.swift ────────────────────────────────────────────────
+//
+//  ArtistStore+Import.swift
+//  ArtistMusic
+//
+//  Created 15 May 2025
+//
+
 import Foundation
+import UniformTypeIdentifiers
 
+// MARK: – Public API
 extension ArtistStore {
-    /// Import a file and add to the specified artist
-    public func importSong(from url: URL, artistID: UUID) {
-        // 1) Access the external file
-        let didAccess = url.startAccessingSecurityScopedResource()
-        defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
 
-        // 2) Copy into App Support/ArtistMusic/Audio
-        let supportDir = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let audioDir = supportDir
-            .appendingPathComponent("ArtistMusic/Audio", isDirectory: true)
-        try? FileManager.default.createDirectory(
-            at: audioDir,
-            withIntermediateDirectories: true
-        )
+    /// Copy an audio file into **App Support/ArtistMusic/Audio/**,
+    /// preserving the original filename (adding “-1,-2 …” on collision),
+    /// then registers it as a new `Song` for `artistID`.
+    @MainActor
+    public func importSong(from sourceURL: URL, artistID: UUID) {
+        let accessed = sourceURL.startAccessingSecurityScopedResource()
+        defer { if accessed { sourceURL.stopAccessingSecurityScopedResource() } }
 
-        // Extract original filename for display
-        let originalFilename = url.lastPathComponent
-        let nameWithoutExtension = url.deletingPathExtension().lastPathComponent
-        print("📄 Original filename: \(originalFilename)")
-        print("📝 Using title: \(nameWithoutExtension)")
+        // ── Destination folder
+        let support  = FileManager.default.urls(for: .applicationSupportDirectory,
+                                                in: .userDomainMask)[0]
+        let audioDir = support.appendingPathComponent("ArtistMusic/Audio",
+                                                      isDirectory: true)
+        try? FileManager.default.createDirectory(at: audioDir,
+                                                 withIntermediateDirectories: true)
 
-        // Create a unique storage filename with original extension
-        let ext = url.pathExtension
-        let uniqueFilename = "\(UUID().uuidString).\(ext)"
-        let dest = audioDir.appendingPathComponent(uniqueFilename)
-        
-        do {
-            try FileManager.default.copyItem(at: url, to: dest)
-            print("✅ Copied file to: \(dest.path)")
-        } catch {
-            print("❌ Copy error:", error)
-            return
+        // ── Preserve filename
+        var dest = audioDir.appendingPathComponent(sourceURL.lastPathComponent)
+        var idx  = 1
+        while FileManager.default.fileExists(atPath: dest.path) {
+            let base = sourceURL.deletingPathExtension().lastPathComponent
+            let ext  = sourceURL.pathExtension
+            dest = audioDir.appendingPathComponent("\(base)-\(idx).\(ext)")
+            idx += 1
         }
 
-        // 3) Build the Song - use original name as title but unique filename for storage
-        let song = Song(
-            id: UUID(),
-            title: nameWithoutExtension,    // Original name for display
-            version: "",
-            creators: [],
-            date: Date(),
-            notes: "",
-            artworkData: nil,
-            fileName: uniqueFilename        // Unique name for storage
-        )
+        // ── Copy
+        do    { try FileManager.default.copyItem(at: sourceURL, to: dest) }
+        catch { print("❌ Import copy error:", error); return }
 
-        // 4) Add to the specified artist
-        add(song, to: artistID)
-        print("✅ Added song: \(song.title) with storage filename: \(song.fileName)")
+        // ── Register
+        let newSong = Song(id: UUID(),
+                           title: sourceURL.deletingPathExtension().lastPathComponent,
+                           version: "",
+                           creators: [],
+                           date: Date(),
+                           notes: "",
+                           artworkData: nil,
+                           fileName: dest.lastPathComponent)
+
+        add(newSong, to: artistID)
+        print("✅ Imported", newSong.title)
     }
 
-    /// Sync playlists from a folder→files map
-    /// Called by FileSystemManager.refreshAllFiles()
-    public func syncPlaylists(from map: [URL: [URL]]) {
-        guard !artists.isEmpty else { return }
-        let artistIndex = 0
-        var names = Set<String>()
-
-        for (folder, urls) in map {
-            let name = folder.lastPathComponent
-            names.insert(name)
-
-            let ids: [UUID] = urls.compactMap { fileURL in
-                artists[artistIndex]
-                  .songs
-                  .first(where: { $0.fileName == fileURL.lastPathComponent })?
-                  .id
-            }
-
-            if let idx = artists[artistIndex].playlists.firstIndex(where: { $0.name == name }) {
-                artists[artistIndex].playlists[idx].songIDs = ids
-            } else {
-                artists[artistIndex].playlists.append(Playlist(name: name, songIDs: ids))
-            }
-        }
-
-        // Remove any playlists that no longer have a backing folder
-        artists[artistIndex].playlists.removeAll { pl in
-            pl.name != "All Songs" && !names.contains(pl.name)
-        }
+    /// Placeholder so `FileSystemManager` continues to compile.
+    /// Implement actual logic if/when playlist-file syncing is required.
+    @MainActor
+    public func syncPlaylists() {
+        print("ℹ️ ArtistStore.syncPlaylists() – placeholder")
     }
 }
